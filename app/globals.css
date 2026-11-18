@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f6f4ef;
+  --card: #ffffff;
+  --ink: #1d1b16;
+  --muted: #6b665c;
+  --line: #e4dfd4;
+  --accent: #c2410c;
+  --accent-ink: #ffffff;
+  --ok: #15803d;
+  --bad: #b91c1c;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14130f;
+    --card: #1e1c17;
+    --ink: #f1ede4;
+    --muted: #a39d90;
+    --line: #34312a;
+    --accent: #fb923c;
+    --accent-ink: #1d1b16;
+    --ok: #4ade80;
+    --bad: #f87171;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-ok: var(--ok);
+  --color-bad: var(--bad);
+  --font-sans: var(--font-geist-sans);
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
+}
+
+@utility input {
+  @apply w-full rounded-xl border border-line bg-card px-3 py-2.5 text-base outline-none focus:border-accent;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-[.98] disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-accent text-accent-ink;
+}
+@utility btn-ghost {
+  @apply btn border border-line bg-card text-ink;
+}
+@utility card {
+  @apply rounded-2xl border border-line bg-card p-4;
+}
+@utility label {
+  @apply mb-1 block text-xs font-medium uppercase tracking-wide text-muted;
+}

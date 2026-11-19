@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db, BUCKET } from "@/lib/supabase";
 import { AUTH_COOKIE, pinToken } from "@/lib/auth";
-import type { QuestionType } from "@/lib/types";
+import { fromArLocalInput, type QuestionType } from "@/lib/types";
 
 // ---------- auth ----------
 export async function login(_prev: string | null, form: FormData): Promise<string | null> {
@@ -54,7 +54,7 @@ export async function createApartment(form: FormData) {
 }
 
 export async function updateApartment(id: string, form: FormData) {
-  // Only fields present in the submitted form are updated (several forms share this action).
+  // Single save for every tab: only fields present in the form are updated.
   const parsers: Record<string, (f: FormData, k: string) => unknown> = {
     name: (f, k) => str(f, k) ?? "Depto sin nombre",
     address: str,
@@ -67,7 +67,11 @@ export async function updateApartment(id: string, form: FormData) {
     contact_phone: str,
     contact_email: str,
     agency: str,
-    listing_url: str,
+    listing_url: (f, k) => {
+      const v = str(f, k);
+      if (!v) return null;
+      return /^https?:\/\//i.test(v) ? v : `https://${v}`;
+    },
     rating: (f, k) => {
       const r = num(f, k);
       return r && r >= 1 && r <= 5 ? r : null;
@@ -75,14 +79,31 @@ export async function updateApartment(id: string, form: FormData) {
     notes: str,
     visit_at: (f, k) => {
       const v = str(f, k);
-      return v ? new Date(v).toISOString() : null;
+      return v ? fromArLocalInput(v) : null;
     },
+    meeting_place: (f, k) => {
+      const v = str(f, k);
+      return v === "depto" || v === "inmobiliaria" ? v : null;
+    },
+    agency_address: str,
   };
   const patch: Record<string, unknown> = {};
   for (const [k, parse] of Object.entries(parsers)) if (form.has(k)) patch[k] = parse(form, k);
-  if (Object.keys(patch).length === 0) return;
-  const { error } = await db().from("apartments").update(patch).eq("id", id);
-  if (error) throw error;
+
+  // Answers come as "q:<questionId>" fields (from the Preguntas tab).
+  const now = new Date().toISOString();
+  const answers = [...form.keys()]
+    .filter((k) => k.startsWith("q:"))
+    .map((k) => ({ apartment_id: id, question_id: k.slice(2), value: str(form, k), updated_at: now }));
+
+  if (Object.keys(patch).length) {
+    const { error } = await db().from("apartments").update(patch).eq("id", id);
+    if (error) throw error;
+  }
+  if (answers.length) {
+    const { error } = await db().from("answers").upsert(answers);
+    if (error) throw error;
+  }
   revalidatePath("/");
   revalidatePath("/compare");
   revalidatePath(`/apt/${id}`);
@@ -97,17 +118,6 @@ export async function deleteApartment(id: string) {
   if (error) throw error;
   revalidatePath("/");
   redirect("/");
-}
-
-// ---------- answers ----------
-export async function saveAnswer(apartmentId: string, questionId: string, value: string | null) {
-  const v = value == null || value.trim() === "" ? null : value.trim();
-  const { error } = await db()
-    .from("answers")
-    .upsert({ apartment_id: apartmentId, question_id: questionId, value: v, updated_at: new Date().toISOString() });
-  if (error) throw error;
-  revalidatePath("/");
-  revalidatePath("/compare");
 }
 
 // ---------- questions ----------

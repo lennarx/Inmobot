@@ -24,6 +24,8 @@ export interface Apartment {
   rating: number | null;
   notes: string | null;
   visit_at: string | null;
+  meeting_place: "depto" | "inmobiliaria" | null;
+  agency_address: string | null;
   created_at: string;
 }
 
@@ -55,4 +57,35 @@ export function mapsUrl(a: Pick<Apartment, "address" | "lat" | "lng">): string |
 export function money(n: number | null, currency: string): string {
   if (n == null) return "—";
   return `${currency === "USD" ? "US$" : "$"} ${n.toLocaleString("es-AR")}`;
+}
+
+// Visits are entered and shown in Argentina time (UTC-3, no DST).
+const AR_OFFSET_MS = 3 * 3600 * 1000;
+
+/** ISO timestamp -> "YYYY-MM-DDTHH:mm" for <input type="datetime-local"> in AR time. */
+export function toArLocalInput(iso: string | null): string {
+  if (!iso) return "";
+  return new Date(Date.parse(iso) - AR_OFFSET_MS).toISOString().slice(0, 16);
+}
+
+/** "YYYY-MM-DDTHH:mm" in AR time -> ISO timestamp. */
+export function fromArLocalInput(v: string): string | null {
+  const t = Date.parse(`${v}:00-03:00`);
+  return Number.isFinite(t) ? new Date(t).toISOString() : null;
+}
+
+export function formatVisit(iso: string | null): string | null {
+  if (!iso) return null;
+  return new Date(iso).toLocaleString("es-AR", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    weekday: "short",
+    day: "numeric",
+    month: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export function addressMapsUrl(address: string | null): string | null {
+  return address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : null;
 }

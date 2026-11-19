@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { answersMap, coverPhotos, listApartments, listQuestions } from "@/lib/data";
-import { mapsUrl, money } from "@/lib/types";
+import { addressMapsUrl, formatVisit, mapsUrl, money } from "@/lib/types";
 import { createApartment } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +31,8 @@ export default async function Home() {
           const ans = answers[a.id] ?? {};
           const answered = questions.filter((q) => ans[q.id] != null).length;
           const maps = mapsUrl(a);
+          const visit = formatVisit(a.visit_at);
+          const meetMaps = a.meeting_place === "inmobiliaria" ? addressMapsUrl(a.agency_address) : maps;
           return (
             <li key={a.id} className="card overflow-hidden p-0">
               <Link href={`/apt/${a.id}`} className="flex gap-3 p-3">
@@ -64,8 +66,21 @@ export default async function Home() {
                   ))}
                 </div>
               )}
-              {maps && (
-                <a href={maps} target="_blank" className="block border-t border-line px-3 py-2 text-xs text-accent">📍 Abrir en Maps</a>
+              {visit && (
+                <a href={meetMaps ?? undefined} target="_blank" className="block border-t border-line px-3 py-2 text-xs font-medium">
+                  🗓 {visit}
+                  {a.meeting_place === "inmobiliaria"
+                    ? ` · en la inmobiliaria${a.agency_address ? ` (${a.agency_address})` : ""}`
+                    : a.meeting_place === "depto" ? " · en el depto" : ""}
+                </a>
+              )}
+              {(maps || a.listing_url) && (
+                <div className="flex border-t border-line text-xs text-accent">
+                  {maps && <a href={maps} target="_blank" className="flex-1 px-3 py-2">📍 Abrir en Maps</a>}
+                  {a.listing_url && (
+                    <a href={a.listing_url} target="_blank" rel="noopener noreferrer" className="flex-1 px-3 py-2 text-right">🔗 Ver aviso</a>
+                  )}
+                </div>
               )}
             </li>
           );

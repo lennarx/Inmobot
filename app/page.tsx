@@ -2,17 +2,22 @@ import Link from "next/link";
 import { answersMap, coverPhotos, listApartments, listQuestions } from "@/lib/data";
 import { addressMapsUrl, formatVisit, mapsUrl, money } from "@/lib/types";
 import { createApartment } from "./actions";
+import { parseSort, sortApartments } from "@/lib/sort";
+import { SortSelect } from "@/components/SortSelect";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
-  const [apts, questions, answers, covers] = await Promise.all([
+export default async function Home({ searchParams }: PageProps<"/">) {
+  const sort = parseSort((await searchParams).orden);
+  const [rawApts, questions, answers, covers] = await Promise.all([
     listApartments(),
     listQuestions(),
     answersMap(),
     coverPhotos(),
   ]);
   const boolQs = questions.filter((q) => q.type === "boolean");
+  const answeredCount = (id: string) => questions.filter((q) => answers[id]?.[q.id] != null).length;
+  const apts = sortApartments(rawApts, sort, answeredCount);
 
   return (
     <main className="space-y-4 p-4">
@@ -26,10 +31,12 @@ export default async function Home() {
         <button className="btn-primary shrink-0">+ Nuevo</button>
       </form>
 
+      {apts.length > 1 && <SortSelect value={sort} />}
+
       <ul className="space-y-3">
         {apts.map((a) => {
           const ans = answers[a.id] ?? {};
-          const answered = questions.filter((q) => ans[q.id] != null).length;
+          const answered = answeredCount(a.id);
           const maps = mapsUrl(a);
           const visit = formatVisit(a.visit_at);
           const meetMaps = a.meeting_place === "inmobiliaria" ? addressMapsUrl(a.agency_address) : maps;
